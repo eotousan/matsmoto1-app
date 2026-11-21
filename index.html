@@ -1,0 +1,1726 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>松本一丁目自治会 安心つながりアプリ</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts: Noto Sans JP & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans JP"', '"Inter"', 'sans-serif'],
+                    },
+                    colors: {
+                        lineGreen: '#06C755',
+                        lineDark: '#05A847',
+                        lineBg: '#8CABD9',
+                        lineBubbleSelf: '#8DE055',
+                        saitamaBlue: '#005BAC',
+                        alertRed: '#E60012'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* カスタムスクロールバーとモバイルアプリ風の全体レイアウト調整 */
+        body {
+            background-color: #E5E7EB;
+            font-family: 'Noto Sans JP', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* スマホフレームコンテナ（PC閲覧時もスマホアプリのように見やすく中央配置） */
+        .app-shell {
+            max-width: 480px;
+            margin: 0 auto;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            background-color: #F3F4F6;
+            box-shadow: 0 0 25px rgba(0,0,0,0.15);
+            position: relative;
+            overflow: hidden;
+        }
+        /* LINE風チャット吹き出しのしっぽ */
+        .bubble-other {
+            position: relative;
+            background: #FFFFFF;
+            border-radius: 16px;
+            border-top-left-radius: 4px;
+        }
+        .bubble-self {
+            position: relative;
+            background: #8DE055;
+            border-radius: 16px;
+            border-top-right-radius: 4px;
+        }
+        /* 電子印鑑（回覧板確認スタンプ）のアニメーションとデザイン */
+        .hanko-stamp {
+            border: 3px solid #E60012;
+            color: #E60012;
+            border-radius: 50%;
+            width: 58px;
+            height: 58px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 11px;
+            line-height: 1.1;
+            transform: rotate(-12deg);
+            box-shadow: inset 0 0 0 1px #E60012;
+            background-color: rgba(255, 255, 255, 0.92);
+            animation: stampPop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes stampPop {
+            0% { transform: scale(1.8) rotate(-25deg); opacity: 0; }
+            100% { transform: scale(1) rotate(-12deg); opacity: 1; }
+        }
+        /* スクロール領域 */
+        .scroll-area {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .scroll-area::-webkit-scrollbar {
+            width: 4px;
+        }
+        .scroll-area::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.2);
+            border-radius: 4px;
+        }
+        /* 緊急アラート点滅 */
+        @keyframes pulseAlert {
+            0%, 100% { background-color: #DC2626; }
+            50% { background-color: #991B1B; }
+        }
+        .emergency-banner {
+            animation: pulseAlert 2s infinite;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-shell" id="app">
+    <!-- ================= 会員認証・ログイン画面（初期またはログアウト時に表示） ================= -->
+    <div id="auth-screen" class="hidden absolute inset-0 z-50 bg-gradient-to-b from-emerald-700 to-emerald-900 text-white flex flex-col justify-between p-6">
+        <div class="mt-6 text-center">
+            <div class="w-20 h-20 bg-white text-emerald-700 rounded-3xl mx-auto flex items-center justify-center shadow-lg mb-4">
+                <i class="fa-solid fa-people-roof text-4xl"></i>
+            </div>
+            <span class="inline-block bg-emerald-600/80 border border-emerald-400 text-xs px-3 py-1 rounded-full mb-2">さいたま市南区 会員限定ポータル</span>
+            <h1 class="text-2xl font-bold tracking-wide">松本一丁目自治会</h1>
+            <p class="text-emerald-100 text-sm mt-1">安心つながりアプリ</p>
+        </div>
+
+        <div class="bg-white text-gray-800 rounded-2xl p-5 shadow-xl">
+            <h2 class="text-base font-bold text-center text-gray-700 mb-3">
+                <i class="fa-solid fa-shield-halved text-emerald-600 mr-1"></i>自治会員認証（デモ選択）
+            </h2>
+            <p class="text-xs text-gray-500 mb-4 leading-relaxed">
+                本アプリは松本一丁目自治会の会員番号・認証コードをお持ちの方のみ利用できます。体験する会員アカウントを選択してください。
+            </p>
+            
+            <div class="space-y-3">
+                <button onclick="loginAs('member')" class="w-full text-left p-4 rounded-xl border-2 border-emerald-500 bg-emerald-50/60 hover:bg-emerald-100 transition flex items-center justify-between">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="bg-emerald-600 text-white text-xs font-bold px-2 py-0.5 rounded">一般会員</span>
+                            <span class="font-bold text-gray-900 text-base">山田 太郎</span>
+                        </div>
+                        <p class="text-xs text-gray-600 mt-1">松本1丁目 3班（会員ID: M1-0312）</p>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-emerald-600"></i>
+                </button>
+
+                <button onclick="loginAs('officer')" class="w-full text-left p-4 rounded-xl border-2 border-amber-500 bg-amber-50/60 hover:bg-amber-100 transition flex items-center justify-between">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="bg-amber-600 text-white text-xs font-bold px-2 py-0.5 rounded">理事・役員</span>
+                            <span class="font-bold text-gray-900 text-base">佐藤 花子</span>
+                        </div>
+                        <p class="text-xs text-gray-600 mt-1">防災・広報担当理事（会員ID: M1-0004）</p>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-amber-600"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="text-center text-xs text-emerald-200">
+            <p>※一般会員は「理事専用ルーム」の閲覧や「全会員お知らせ発信」が制限されます。</p>
+        </div>
+    </div>
+
+    <!-- ================= 上部固定ヘッダー ================= -->
+    <header class="bg-slate-800 text-white px-3.5 py-2.5 shadow-md z-20 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-2.5 min-w-0">
+            <div class="w-9 h-9 rounded-xl bg-lineGreen flex items-center justify-center shrink-0 shadow">
+                <i class="fa-solid fa-house-chimney-user text-white text-lg"></i>
+            </div>
+            <div class="min-w-0">
+                <div class="flex items-center gap-1.5">
+                    <h1 class="font-bold text-sm sm:text-base truncate">松本一丁目自治会</h1>
+                    <span class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] px-1.5 py-0.2 rounded shrink-0">会員認証済</span>
+                </div>
+                <p id="header-user-info" class="text-xs text-slate-300 truncate">
+                    山田 太郎（3班 / 一般会員）
+                </p>
+            </div>
+        </div>
+
+        <!-- 役割切り替えボタン（デモ体験用） -->
+        <button onclick="toggleRoleModal()" class="bg-slate-700 hover:bg-slate-600 active:scale-95 transition border border-slate-500 rounded-xl px-2.5 py-1.5 text-xs flex items-center gap-1.5 shrink-0">
+            <span id="header-role-badge" class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+            <span class="font-bold">役割切替</span>
+            <i class="fa-solid fa-repeat text-[11px] text-slate-300"></i>
+        </button>
+    </header>
+
+    <!-- 緊急速報ティッカー（緊急連絡が発信された際に全画面上部に表示） -->
+    <div id="global-emergency-bar" class="hidden emergency-banner text-white px-3 py-2 text-xs font-bold flex items-center justify-between shadow-md z-20 shrink-0">
+        <div class="flex items-center gap-2 truncate" onclick="switchTab('emergency')">
+            <i class="fa-solid fa-triangle-exclamation text-yellow-300 text-base animate-bounce"></i>
+            <span id="global-emergency-text" class="truncate">【緊急】不審者情報：笹目川遊歩道付近で声かけ事案発生</span>
+        </div>
+        <button onclick="dismissEmergencyBar()" class="ml-2 bg-black/30 px-2 py-0.5 rounded text-[11px] shrink-0">閉じる</button>
+    </div>
+
+    <!-- ================= メインコンテンツエリア（タブによって切替） ================= -->
+    <main class="flex-1 flex flex-col overflow-hidden relative">
+
+        <!-- =========================================================
+             TAB 1: トーク（LINE風チャット＆お知らせモード）
+             ========================================================= -->
+        <section id="tab-talk" class="flex-1 flex flex-col overflow-hidden">
+            <!-- ルーム選択タブ（お知らせ / 3班グループ / 防犯パトロール / 理事会専用） -->
+            <div class="bg-white border-b border-gray-200 px-2 py-2 flex gap-1.5 overflow-x-auto shrink-0 shadow-sm">
+                <button onclick="selectRoom('notice')" id="room-btn-notice" class="room-tab active px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0 transition bg-lineGreen text-white shadow-sm">
+                    <i class="fa-solid fa-bullhorn"></i>
+                    <span>全会員お知らせ</span>
+                    <span class="bg-white text-lineGreen text-[10px] px-1.5 rounded-full font-extrabold">重要</span>
+                </button>
+                <button onclick="selectRoom('group3')" id="room-btn-group3" class="room-tab px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0 transition bg-gray-100 text-gray-700 hover:bg-gray-200">
+                    <i class="fa-solid fa-users"></i>
+                    <span>3班 連絡網</span>
+                </button>
+                <button onclick="selectRoom('patrol')" id="room-btn-patrol" class="room-tab px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0 transition bg-gray-100 text-gray-700 hover:bg-gray-200">
+                    <i class="fa-solid fa-shield-cat"></i>
+                    <span>防犯パトロール</span>
+                </button>
+                <button onclick="selectRoom('board')" id="room-btn-board" class="room-tab px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0 transition bg-amber-50 text-amber-800 border border-amber-300">
+                    <i id="board-lock-icon" class="fa-solid fa-lock text-amber-600"></i>
+                    <span>理事会専用</span>
+                </button>
+            </div>
+
+            <!-- ルーム情報バナー -->
+            <div id="room-banner" class="bg-emerald-50 border-b border-emerald-200 px-3 py-1.5 text-xs text-emerald-900 flex items-center justify-between shrink-0">
+                <span id="room-desc"><i class="fa-solid fa-circle-info mr-1 text-emerald-600"></i>自治会役員からの公式連絡です（一般会員は確認スタンプのみ可能）</span>
+                <span id="room-member-count" class="text-[11px] font-bold text-emerald-700 shrink-0 ml-2">全248世帯</span>
+            </div>
+
+            <!-- チャットメッセージ表示エリア（LINE風背景色） -->
+            <div id="chat-messages" class="scroll-area p-3.5 space-y-4 bg-[#8CABD9]/35">
+                <!-- JSで動的にメッセージを描画 -->
+            </div>
+
+            <!-- チャット入力エリア（ルームと権限によって変化） -->
+            <div id="chat-input-area" class="bg-white border-t border-gray-200 p-2.5 shrink-0">
+                <!-- 1. 通常チャット入力（グループトーク・理事会・お知らせ投稿権限あり時） -->
+                <div id="chat-composer" class="flex flex-col gap-2">
+                    <!-- スタンプパレット（開閉式） -->
+                    <div id="sticker-palette" class="hidden grid grid-cols-4 gap-2 p-2 bg-gray-50 rounded-xl border border-gray-200">
+                        <button onclick="sendSticker('了解しました！👍')" class="p-2 bg-white rounded-lg border hover:bg-emerald-50 text-center shadow-sm">
+                            <div class="text-2xl">🙆‍♂️</div>
+                            <div class="text-[11px] font-bold text-gray-700 mt-0.5">了解です！</div>
+                        </button>
+                        <button onclick="sendSticker('ありがとうございます🙏')" class="p-2 bg-white rounded-lg border hover:bg-emerald-50 text-center shadow-sm">
+                            <div class="text-2xl">🙇‍♀️</div>
+                            <div class="text-[11px] font-bold text-gray-700 mt-0.5">ありがとう</div>
+                        </button>
+                        <button onclick="sendSticker('確認しました✅')" class="p-2 bg-white rounded-lg border hover:bg-emerald-50 text-center shadow-sm">
+                            <div class="text-2xl">✅</div>
+                            <div class="text-[11px] font-bold text-gray-700 mt-0.5">確認済</div>
+                        </button>
+                        <button onclick="sendSticker('お疲れ様です☕')" class="p-2 bg-white rounded-lg border hover:bg-emerald-50 text-center shadow-sm">
+                            <div class="text-2xl">🍵</div>
+                            <div class="text-[11px] font-bold text-gray-700 mt-0.5">お疲れ様！</div>
+                        </button>
+                    </div>
+
+                    <!-- お知らせモード用オプション（理事のみ表示） -->
+                    <div id="notice-composer-badge" class="hidden flex items-center justify-between bg-amber-50 border border-amber-300 px-2.5 py-1 rounded-lg text-xs text-amber-900">
+                        <span class="font-bold"><i class="fa-solid fa-tower-broadcast text-amber-600 mr-1"></i>全会員一斉お知らせ配信モード</span>
+                        <label class="flex items-center gap-1 cursor-pointer">
+                            <input type="checkbox" id="notice-urgent-check" class="rounded text-red-600">
+                            <span class="text-red-700 font-bold">重要マーク付与</span>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button onclick="toggleStickerPalette()" class="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center shrink-0" title="スタンプ">
+                            <i class="fa-regular fa-face-smile text-xl"></i>
+                        </button>
+                        <input type="text" id="chat-input" placeholder="メッセージを入力..." class="flex-1 bg-gray-100 border border-gray-300 rounded-full px-4 py-2.5 text-sm focus:outline-none focus:border-lineGreen focus:bg-white" onkeypress="if(event.key==='Enter') sendChatMessage()">
+                        <button onclick="sendChatMessage()" class="w-10 h-10 rounded-full bg-lineGreen hover:bg-lineDark text-white flex items-center justify-center shrink-0 shadow">
+                            <i class="fa-solid fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 2. 閲覧専用メッセージ（一般会員がお知らせルームを見ている時） -->
+                <div id="chat-readonly-notice" class="hidden text-center py-2 px-3 bg-gray-100 rounded-xl text-xs text-gray-600">
+                    <i class="fa-solid fa-lock text-gray-400 mr-1"></i>
+                    「全会員お知らせ」への新規配信は<strong>理事・役員のみ</strong>可能です。<br>
+                    各お知らせの<strong>「確認しました」ボタン</strong>を押して既読を伝えてください。
+                </div>
+            </div>
+        </section>
+
+        <!-- =========================================================
+             TAB 2: 電子回覧板（PDF・画像・カメラ撮影掲示機能）
+             ========================================================= -->
+        <section id="tab-circular" class="hidden flex-1 flex flex-col overflow-hidden bg-gray-100">
+            <!-- ヘッダーバー -->
+            <div class="bg-white px-4 py-3 border-b border-gray-200 flex items-center justify-between shrink-0">
+                <div>
+                    <h2 class="font-bold text-base text-gray-800 flex items-center gap-1.5">
+                        <i class="fa-solid fa-clipboard-list text-blue-600"></i>電子回覧板
+                    </h2>
+                    <p class="text-xs text-gray-500">タップして確認印（電子ハンコ）を押してください</p>
+                </div>
+                <button onclick="openModal('modal-new-circular')" class="bg-blue-600 hover:bg-blue-700 active:scale-95 transition text-white text-xs font-bold px-3.5 py-2.5 rounded-xl shadow flex items-center gap-1.5">
+                    <i class="fa-solid fa-camera"></i>
+                    <span>回覧を掲示</span>
+                </button>
+            </div>
+
+            <!-- カテゴリフィルター -->
+            <div class="px-3 py-2 bg-gray-50 border-b border-gray-200 flex gap-1.5 overflow-x-auto shrink-0">
+                <button onclick="filterCirculars('all')" class="circ-filter active px-3 py-1 rounded-full text-xs font-bold bg-blue-600 text-white">すべて</button>
+                <button onclick="filterCirculars('市報・行政')" class="circ-filter px-3 py-1 rounded-full text-xs font-bold bg-white border border-gray-300 text-gray-700">市報・行政</button>
+                <button onclick="filterCirculars('防災・防犯')" class="circ-filter px-3 py-1 rounded-full text-xs font-bold bg-white border border-gray-300 text-gray-700">防災・防犯</button>
+                <button onclick="filterCirculars('イベント・行事')" class="circ-filter px-3 py-1 rounded-full text-xs font-bold bg-white border border-gray-300 text-gray-700">イベント・行事</button>
+            </div>
+
+            <!-- 回覧板リスト -->
+            <div id="circular-list" class="scroll-area p-3.5 space-y-3.5">
+                <!-- JSで動的描画 -->
+            </div>
+        </section>
+
+        <!-- =========================================================
+             TAB 3: 街の不具合報告（道路・街灯・水路レポート）
+             ========================================================= -->
+        <section id="tab-report" class="hidden flex-1 flex flex-col overflow-hidden bg-gray-100">
+            <!-- 上部アクションバナー -->
+            <div class="bg-gradient-to-r from-amber-500 to-orange-600 text-white p-4 shrink-0 shadow">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="font-bold text-base flex items-center gap-1.5">
+                            <i class="fa-solid fa-road-barrier"></i>街の不具合・安全レポート
+                        </h2>
+                        <p class="text-xs text-amber-100 mt-0.5">道路の穴・街灯切れ・水路の詰まりを写真で報告</p>
+                    </div>
+                    <button onclick="openModal('modal-new-report')" class="bg-white text-orange-600 hover:bg-orange-50 active:scale-95 transition font-bold text-xs px-3.5 py-2.5 rounded-xl shadow-md flex items-center gap-1.5 shrink-0">
+                        <i class="fa-solid fa-plus-circle text-sm"></i>
+                        <span>新規報告する</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 報告ステータス集計バー -->
+            <div class="bg-white px-4 py-2 border-b border-gray-200 flex items-center justify-around text-center shrink-0">
+                <div>
+                    <span class="text-[11px] text-gray-500 block">受付中</span>
+                    <span id="stat-open" class="font-bold text-sm text-red-600">1件</span>
+                </div>
+                <div class="h-6 w-px bg-gray-200"></div>
+                <div>
+                    <span class="text-[11px] text-gray-500 block">さいたま市へ連絡済</span>
+                    <span id="stat-progress" class="font-bold text-sm text-amber-600">1件</span>
+                </div>
+                <div class="h-6 w-px bg-gray-200"></div>
+                <div>
+                    <span class="text-[11px] text-gray-500 block">修繕完了</span>
+                    <span id="stat-done" class="font-bold text-sm text-emerald-600">1件</span>
+                </div>
+            </div>
+
+            <!-- 不具合報告一覧 -->
+            <div id="report-list" class="scroll-area p-3.5 space-y-3.5">
+                <!-- JSで動的描画 -->
+            </div>
+        </section>
+
+        <!-- =========================================================
+             TAB 4: 行政・緊急連絡（緊急SOS発信＆さいたま市南区電話帳）
+             ========================================================= -->
+        <section id="tab-emergency" class="hidden flex-1 flex flex-col overflow-hidden bg-gray-100">
+            <div class="scroll-area p-3.5 space-y-4">
+                
+                <!-- 1. 緊急連絡・不審者アラート発信パネル -->
+                <div class="bg-red-50 border-2 border-red-500 rounded-2xl p-4 shadow-sm">
+                    <div class="flex items-center gap-2 text-red-700 font-bold text-base mb-1">
+                        <i class="fa-solid fa-bell text-xl animate-bounce"></i>
+                        <span>緊急連絡・不審者情報の発信</span>
+                    </div>
+                    <p class="text-xs text-red-800 mb-3 leading-relaxed">
+                        町内での不審者目撃、火災・水害（笹目川・荒川周辺）、迷子などの緊急事態を<strong>松本一丁目全会員のスマホへ一斉通知</strong>します。
+                    </p>
+                    <button onclick="openModal('modal-emergency-send')" class="w-full bg-red-600 hover:bg-red-700 active:scale-98 transition text-white font-bold py-3.5 px-4 rounded-xl shadow-md flex items-center justify-center gap-2 text-sm">
+                        <i class="fa-solid fa-tower-broadcast text-lg"></i>
+                        <span>全会員へ緊急アラートを発信する</span>
+                    </button>
+                </div>
+
+                <!-- 110番・119番 クイック発信 -->
+                <div class="grid grid-cols-2 gap-2.5">
+                    <a href="tel:110" onclick="confirmCall(event, '110番（警察・事件事故）', '110')" class="bg-slate-800 text-white rounded-xl p-3 flex items-center justify-center gap-2.5 shadow active:scale-95 transition">
+                        <div class="w-9 h-9 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-shield-halved"></i>
+                        </div>
+                        <div class="text-left">
+                            <div class="text-xs text-slate-300">事件・不審者</div>
+                            <div class="font-bold text-base">110番通報</div>
+                        </div>
+                    </a>
+                    <a href="tel:119" onclick="confirmCall(event, '119番（消防・救急）', '119')" class="bg-slate-800 text-white rounded-xl p-3 flex items-center justify-center gap-2.5 shadow active:scale-95 transition">
+                        <div class="w-9 h-9 rounded-full bg-red-500 flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-truck-medical"></i>
+                        </div>
+                        <div class="text-left">
+                            <div class="text-xs text-slate-300">火災・救急</div>
+                            <div class="font-bold text-base">119番通報</div>
+                        </div>
+                    </a>
+                </div>
+
+                <!-- 2. さいたま市・南区役所 関連部署ワンタップ電話帳 -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="bg-saitamaBlue text-white px-4 py-3 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-phone-volume"></i>
+                            <h3 class="font-bold text-sm">さいたま市・南区役所 窓口電話帳</h3>
+                        </div>
+                        <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded">松本一丁目管轄</span>
+                    </div>
+
+                    <div class="divide-y divide-gray-100" id="gov-contacts-list">
+                        <!-- JSで窓口一覧を描画 -->
+                    </div>
+                </div>
+
+                <!-- 避難所情報（松本一丁目住民向け） -->
+                <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-3.5 text-xs text-emerald-900">
+                    <h4 class="font-bold text-sm flex items-center gap-1.5 text-emerald-800 mb-1.5">
+                        <i class="fa-solid fa-person-shelter"></i>松本一丁目 指定避難場所メモ
+                    </h4>
+                    <ul class="space-y-1 list-disc list-inside text-emerald-800">
+                        <li><strong>さいたま市立西浦和小学校</strong>（松本1-25-1）</li>
+                        <li><strong>さいたま市立内谷中学校</strong>（内谷3-14-1）</li>
+                        <li>※荒川・笹目川増水時は垂直避難（2階以上）も検討してください。</li>
+                    </ul>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ================= 下部固定ナビゲーションバー ================= -->
+    <nav class="bg-white border-t border-gray-200 grid grid-cols-4 py-1.5 px-1 shrink-0 z-20 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+        <button onclick="switchTab('talk')" id="nav-talk" class="nav-btn flex flex-col items-center justify-center py-1 rounded-xl text-lineGreen font-bold">
+            <div class="relative">
+                <i class="fa-solid fa-comments text-xl"></i>
+                <span id="badge-talk" class="absolute -top-1 -right-2.5 bg-red-500 text-white text-[10px] font-bold px-1.5 rounded-full">2</span>
+            </div>
+            <span class="text-[11px] mt-1">トーク</span>
+        </button>
+
+        <button onclick="switchTab('circular')" id="nav-circular" class="nav-btn flex flex-col items-center justify-center py-1 rounded-xl text-gray-500 hover:text-gray-800">
+            <div class="relative">
+                <i class="fa-solid fa-clipboard-check text-xl"></i>
+                <span id="badge-circular" class="absolute -top-1 -right-2.5 bg-blue-600 text-white text-[10px] font-bold px-1.5 rounded-full">1</span>
+            </div>
+            <span class="text-[11px] mt-1">電子回覧板</span>
+        </button>
+
+        <button onclick="switchTab('report')" id="nav-report" class="nav-btn flex flex-col items-center justify-center py-1 rounded-xl text-gray-500 hover:text-gray-800">
+            <div class="relative">
+                <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+            </div>
+            <span class="text-[11px] mt-1">街の不具合</span>
+        </button>
+
+        <button onclick="switchTab('emergency')" id="nav-emergency" class="nav-btn flex flex-col items-center justify-center py-1 rounded-xl text-gray-500 hover:text-gray-800">
+            <div class="relative">
+                <i class="fa-solid fa-phone-flip text-xl"></i>
+            </div>
+            <span class="text-[11px] mt-1">行政・緊急</span>
+        </button>
+    </nav>
+
+    <!-- =====================================================================
+         モーダル群（新規回覧板作成 / 不具合報告作成 / 緊急発信 / 役割切替 / 回覧詳細）
+         ===================================================================== -->
+
+    <!-- 1. 役割・アカウント切り替えモーダル -->
+    <div id="modal-role" class="hidden fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="font-bold text-base text-gray-800">会員アカウント切替（デモ）</h3>
+                <button onclick="closeModal('modal-role')" class="text-gray-400 hover:text-gray-600 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <p class="text-xs text-gray-600 mb-4">役割を切り替えると、「理事会専用ルーム」への入室権限や「全会員お知らせ」の配信権限、「不具合ステータス変更」の挙動を確認できます。</p>
+            
+            <div class="space-y-2.5 mb-4">
+                <button onclick="switchUserRole('member')" id="role-opt-member" class="w-full p-3.5 rounded-xl border-2 border-emerald-500 bg-emerald-50 text-left flex items-center justify-between">
+                    <div>
+                        <span class="bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded">一般会員</span>
+                        <div class="font-bold text-sm text-gray-900 mt-1">山田 太郎（松本1丁目 3班）</div>
+                        <div class="text-[11px] text-gray-500">お知らせ閲覧・回覧確認・不具合報告が可能</div>
+                    </div>
+                    <i class="fa-solid fa-check-circle text-emerald-600 text-lg"></i>
+                </button>
+
+                <button onclick="switchUserRole('officer')" id="role-opt-officer" class="w-full p-3.5 rounded-xl border-2 border-gray-200 hover:border-amber-400 text-left flex items-center justify-between">
+                    <div>
+                        <span class="bg-amber-600 text-white text-[10px] font-bold px-2 py-0.5 rounded">理事・役員</span>
+                        <div class="font-bold text-sm text-gray-900 mt-1">佐藤 花子（防災・広報担当理事）</div>
+                        <div class="text-[11px] text-gray-500">全会員お知らせ配信・理事会チャット・対応管理が可能</div>
+                    </div>
+                    <i class="fa-solid fa-check-circle text-gray-300 text-lg"></i>
+                </button>
+            </div>
+
+            <button onclick="showAuthScreen()" class="w-full py-2 text-xs text-gray-500 underline">ログアウト画面（初期認証画面）を表示</button>
+        </div>
+    </div>
+
+    <!-- 2. 新規電子回覧板 作成・カメラ撮影モーダル -->
+    <div id="modal-new-circular" class="hidden fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center">
+        <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-md w-full max-h-[90dvh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="px-5 py-3.5 bg-blue-600 text-white flex items-center justify-between shrink-0">
+                <h3 class="font-bold text-base"><i class="fa-solid fa-file-circle-plus mr-1.5"></i>新しい回覧板を掲示</h3>
+                <button onclick="closeModal('modal-new-circular')" class="text-white/80 hover:text-white p-1"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+
+            <div class="p-4 overflow-y-auto space-y-3.5">
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">カテゴリ</label>
+                    <select id="circ-input-cat" class="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm bg-gray-50">
+                        <option value="市報・行政">市報・行政（さいたま市・南区）</option>
+                        <option value="防災・防犯">防災・防犯</option>
+                        <option value="イベント・行事">イベント・行事（お祭り・清掃など）</option>
+                        <option value="その他">その他のお知らせ</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">回覧タイトル <span class="text-red-500">*</span></label>
+                    <input type="text" id="circ-input-title" placeholder="例：令和8年度 秋季クリーン作戦のご案内" class="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">内容・案内文</label>
+                    <textarea id="circ-input-body" rows="3" placeholder="日時や集合場所、持ち物などを入力してください。" class="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm"></textarea>
+                </div>
+
+                <!-- カメラ撮影・PDF・画像添付エリア -->
+                <div class="bg-blue-50/70 border border-blue-200 rounded-xl p-3">
+                    <label class="block text-xs font-bold text-blue-900 mb-2">
+                        <i class="fa-solid fa-paperclip mr-1"></i>チラシ撮影・PDF/画像ファイル添付
+                    </label>
+                    
+                    <div class="grid grid-cols-2 gap-2 mb-2">
+                        <!-- スマホカメラ起動用 input -->
+                        <label class="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-camera"></i>
+                            <span>カメラで撮影</span>
+                            <input type="file" accept="image/*" capture="environment" class="hidden" onchange="handleCircularFile(event, 'camera')">
+                        </label>
+
+                        <!-- PDF・画像ファイル選択用 input -->
+                        <label class="cursor-pointer bg-white hover:bg-gray-50 text-blue-700 border border-blue-300 text-xs font-bold py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-file-pdf"></i>
+                            <span>PDF / 画像選択</span>
+                            <input type="file" accept="image/*,application/pdf" class="hidden" onchange="handleCircularFile(event, 'file')">
+                        </label>
+                    </div>
+
+                    <!-- デモ用サンプルチラシ即時添付ボタン -->
+                    <button type="button" onclick="attachSampleFlyer()" class="w-full text-center text-[11px] text-blue-600 underline py-1">
+                        ※カメラが無いPC環境用：サンプルチラシ画像を添付する
+                    </button>
+
+                    <!-- 添付プレビュー表示 -->
+                    <div id="circ-file-preview" class="hidden mt-2 bg-white p-2 rounded-lg border border-blue-200 flex items-center justify-between">
+                        <div class="flex items-center gap-2 truncate">
+                            <i id="circ-preview-icon" class="fa-solid fa-image text-blue-600 text-lg"></i>
+                            <span id="circ-preview-name" class="text-xs font-bold text-gray-700 truncate">チラシ画像.jpg</span>
+                        </div>
+                        <button type="button" onclick="clearCircularFile()" class="text-red-500 text-xs font-bold px-2">削除</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-gray-200 bg-gray-50 flex gap-2 shrink-0">
+                <button onclick="closeModal('modal-new-circular')" class="flex-1 py-3 rounded-xl border border-gray-300 text-gray-700 font-bold text-sm">キャンセル</button>
+                <button onclick="submitNewCircular()" class="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow">回覧板に掲示する</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. 回覧板 詳細＆電子印鑑モーダル -->
+    <div id="modal-circular-detail" class="hidden fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center">
+        <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-md w-full max-h-[90dvh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="px-5 py-3.5 bg-slate-800 text-white flex items-center justify-between shrink-0">
+                <span id="detail-circ-cat" class="text-xs bg-blue-500 px-2.5 py-0.5 rounded-full font-bold">市報・行政</span>
+                <button onclick="closeModal('modal-circular-detail')" class="text-white/80 hover:text-white p-1"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+
+            <div class="p-5 overflow-y-auto space-y-4" id="detail-circ-content">
+                <!-- JSで動的生成 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. 新規 街の不具合報告モーダル -->
+    <div id="modal-new-report" class="hidden fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center">
+        <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-md w-full max-h-[90dvh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="px-5 py-3.5 bg-orange-600 text-white flex items-center justify-between shrink-0">
+                <h3 class="font-bold text-base"><i class="fa-solid fa-camera mr-1.5"></i>街の不具合を報告する</h3>
+                <button onclick="closeModal('modal-new-report')" class="text-white/80 hover:text-white p-1"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+
+            <div class="p-4 overflow-y-auto space-y-3.5">
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">不具合の種類 <span class="text-red-500">*</span></label>
+                    <select id="rep-input-cat" class="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm bg-gray-50">
+                        <option value="道路の穴・陥没">🕳️ 道路の穴・舗装の陥没</option>
+                        <option value="街灯の球切れ・破損">💡 街灯・防犯灯の球切れ・破損</option>
+                        <option value="水路・側溝のつまり">🌊 水路・側溝のつまり・悪臭</option>
+                        <option value="公園・ゴミ集積所">🌳 公園遊具・ゴミ集積所の問題</option>
+                        <option value="その他">⚠️ その他の危険箇所</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">発生場所（松本一丁目内） <span class="text-red-500">*</span></label>
+                    <div class="flex gap-2">
+                        <input type="text" id="rep-input-loc" placeholder="例：美笹通り沿い 松本1-12付近の電柱" class="flex-1 border border-gray-300 rounded-xl px-3 py-2.5 text-sm">
+                        <button type="button" onclick="fillMockLocation()" class="bg-slate-700 text-white text-xs font-bold px-3 rounded-xl shrink-0 flex items-center gap-1">
+                            <i class="fa-solid fa-location-crosshairs"></i>現在地
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">状況の詳細メモ</label>
+                    <textarea id="rep-input-desc" rows="2" placeholder="例：自転車のタイヤがはまりそうな深さ10cmほどの穴が空いています。" class="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm"></textarea>
+                </div>
+
+                <!-- 現場写真添付 -->
+                <div class="bg-orange-50 border border-orange-200 rounded-xl p-3">
+                    <label class="block text-xs font-bold text-orange-900 mb-2">現場の写真（カメラ撮影 / アルバム）</label>
+                    <div class="flex gap-2">
+                        <label class="flex-1 cursor-pointer bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-camera"></i>
+                            <span>現場を撮影する</span>
+                            <input type="file" accept="image/*" capture="environment" class="hidden" onchange="handleReportPhoto(event)">
+                        </label>
+                        <button type="button" onclick="attachSampleReportPhoto()" class="bg-white border border-orange-300 text-orange-700 text-xs font-bold px-3 rounded-xl">
+                            サンプル写真
+                        </button>
+                    </div>
+                    <div id="rep-photo-preview" class="hidden mt-2 relative">
+                        <img id="rep-preview-img" src="" alt="プレビュー" class="w-full h-32 object-cover rounded-lg border border-orange-300">
+                        <button type="button" onclick="clearReportPhoto()" class="absolute top-1.5 right-1.5 bg-black/60 text-white text-xs px-2 py-1 rounded-lg">削除</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-gray-200 bg-gray-50 flex gap-2 shrink-0">
+                <button onclick="closeModal('modal-new-report')" class="flex-1 py-3 rounded-xl border border-gray-300 text-gray-700 font-bold text-sm">キャンセル</button>
+                <button onclick="submitNewReport()" class="flex-1 py-3 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-sm shadow">役員へ報告する</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. 緊急連絡・不審者情報 発信モーダル -->
+    <div id="modal-emergency-send" class="hidden fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl">
+            <div class="bg-red-600 text-white px-5 py-3.5 flex items-center justify-between">
+                <h3 class="font-bold text-base flex items-center gap-2">
+                    <i class="fa-solid fa-triangle-exclamation"></i>緊急アラート一斉発信
+                </h3>
+                <button onclick="closeModal('modal-emergency-send')" class="text-white/80 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+
+            <div class="p-4 space-y-3.5">
+                <p class="text-xs text-gray-600">発信すると、全会員のトーク画面（お知らせ）および画面上部バナーに緊急速報が表示されます。</p>
+                
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">緊急種別</label>
+                    <select id="emg-type" class="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm font-bold text-red-700 bg-red-50">
+                        <option value="不審者目撃情報">🚨 不審者目撃・声かけ事案</option>
+                        <option value="水害・河川増水警戒">🌊 水害・笹目川/荒川 水位警戒</option>
+                        <option value="火災・ガス漏れ注意">🔥 町内での火災・煙の発生</option>
+                        <option value="迷子・行方不明者捜索">🔍 高齢者・お子様の迷子捜索協力</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">発生場所・特徴・状況 <span class="text-red-500">*</span></label>
+                    <textarea id="emg-detail" rows="3" placeholder="例：15時頃、松本1丁目の公園付近で黒っぽい服装の男が小学生に声をかけていました。浦和警察署へ通報済です。" class="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm"></textarea>
+                </div>
+
+                <div class="flex gap-2 pt-2">
+                    <button onclick="closeModal('modal-emergency-send')" class="flex-1 py-3 rounded-xl border border-gray-300 font-bold text-sm text-gray-700">やめる</button>
+                    <button onclick="sendEmergencyAlert()" class="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow-lg">全会員へ緊急送信</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. 電話発信確認モーダル（誤発信防止＆PCデモ表示用） -->
+    <div id="modal-call-confirm" class="hidden fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-5 text-center shadow-2xl">
+            <div class="w-14 h-14 rounded-full bg-blue-100 text-saitamaBlue mx-auto flex items-center justify-center mb-3">
+                <i class="fa-solid fa-phone text-2xl"></i>
+            </div>
+            <h3 id="call-target-name" class="font-bold text-base text-gray-900">さいたま市南区役所</h3>
+            <p id="call-target-number" class="text-xl font-extrabold text-saitamaBlue my-2 tracking-wider">048-844-7111</p>
+            <p class="text-xs text-gray-500 mb-5">上記の電話番号へ発信しますか？</p>
+            
+            <div class="flex gap-2.5">
+                <button onclick="closeModal('modal-call-confirm')" class="flex-1 py-3 rounded-xl border border-gray-300 font-bold text-sm text-gray-700">キャンセル</button>
+                <a id="call-exec-link" href="tel:0488447111" onclick="closeModal('modal-call-confirm')" class="flex-1 py-3 rounded-xl bg-lineGreen hover:bg-lineDark text-white font-bold text-sm shadow flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-phone"></i>電話をかける
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- トースト通知（画面下部に一時表示されるメッセージボックス） -->
+    <div id="toast" class="hidden fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-xl flex items-center gap-2 whitespace-nowrap">
+        <i class="fa-solid fa-circle-check text-lineGreen"></i>
+        <span id="toast-msg">完了しました</span>
+    </div>
+
+</div>
+
+<!-- ================= JavaScript ロジック ================= -->
+<script>
+    // =========================================================================
+    // 1. アプリ状態管理（さいたま市南区 松本一丁目自治会 リアルデータ）
+    // =========================================================================
+    const state = {
+        currentUser: {
+            id: 'M1-0312',
+            name: '山田 太郎',
+            group: '3班',
+            role: 'member', // 'member' (一般会員) または 'officer' (理事・役員)
+            roleLabel: '一般会員'
+        },
+        activeTab: 'talk',
+        activeRoom: 'notice',
+        circularFilter: 'all',
+        tempCircularFile: null,
+        tempReportPhoto: null,
+
+        // トークルーム別メッセージデータ
+        messages: {
+            notice: [
+                {
+                    id: 'n1',
+                    sender: '高橋 健一（自治会長）',
+                    role: '会長',
+                    time: '昨日 09:30',
+                    isUrgent: true,
+                    text: '【重要】12月からの資源ごみ収集場所の一部変更について\n\n松本一丁目3班・4班エリアの資源ごみ（びん・缶・ペットボトル）集積所が、道路工事に伴い「松本公園北側角」へ一時移動します。お間違えのないようご協力をお願いいたします。',
+                    confirmedByMe: true,
+                    confirmCount: 184
+                },
+                {
+                    id: 'n2',
+                    sender: '佐藤 花子（防災・広報理事）',
+                    role: '理事',
+                    time: '今日 10:15',
+                    isUrgent: false,
+                    text: '【松本一丁目 防災訓練のお知らせ】\n今月最終日曜日の午前9時より、西浦和小学校校庭にて南区合同防災訓練を実施します。初期消火訓練や備蓄品の配布もありますので、ご家族でご参加ください！',
+                    confirmedByMe: false,
+                    confirmCount: 92
+                }
+            ],
+            group3: [
+                {
+                    id: 'g1',
+                    sender: '鈴木 節子（3班長）',
+                    isSelf: false,
+                    time: '08:45',
+                    text: '3班の皆様、おはようございます！今月の班長会資料を電子回覧板にアップしましたので、お時間のある時に確認スタンプをお願いします😊'
+                },
+                {
+                    id: 'g2',
+                    sender: '中村 誠',
+                    isSelf: false,
+                    time: '09:12',
+                    text: '鈴木班長、いつもありがとうございます！先ほど確認印を押しました👍'
+                }
+            ],
+            patrol: [
+                {
+                    id: 'p1',
+                    sender: '渡辺 浩二（防犯部長）',
+                    isSelf: false,
+                    time: '昨日 19:30',
+                    text: '本日の夜間パトロール終了しました。美笹通り沿い、笹目川遊歩道ともに異常ありませんでした。街灯が1箇所暗くなっていたので不具合報告に登録しておきます。'
+                }
+            ],
+            board: [
+                {
+                    id: 'b1',
+                    sender: '高橋 健一（自治会長）',
+                    isSelf: false,
+                    time: '昨日 20:00',
+                    text: '理事の皆様お疲れ様です。次回の定例理事会の議題案です。\n①年末夜警のシフト表\n②南部建設事務所への側溝清掃要望書の提出について\nご意見あればこちらに返信ください。'
+                },
+                {
+                    id: 'b2',
+                    sender: '佐藤 花子（防災・広報理事）',
+                    isSelf: false,
+                    time: '今日 09:05',
+                    text: '会長ありがとうございます！夜警のシフト表ドラフト作成しました。広報紙の冬号と合わせて確認お願いします。'
+                }
+            ]
+        },
+
+        // 電子回覧板データ
+        circulars: [
+            {
+                id: 'c1',
+                category: '防災・防犯',
+                title: 'さいたま市南区 自主防災訓練・炊き出し体験のご案内',
+                author: '佐藤 花子（防災・広報理事）',
+                date: '2026年11月19日',
+                body: '松本一丁目自治会 会員各位\n\n日頃より自治会活動にご協力いただきありがとうございます。首都直下地震や荒川・笹目川の水害に備え、西浦和小学校にて防災訓練を開催いたします。\n・日時：11月29日（日）9:00〜11:30\n・場所：さいたま市立西浦和小学校 体育館・校庭\n・参加世帯には非常用アルファ米と保存水を配布いたします。',
+                fileType: 'pdf',
+                fileName: 'R8_南区防災訓練チラシ_松本1丁目.pdf',
+                imageUrl: 'https://placehold.co/600x360/005BAC/FFFFFF?text=%E3%81%95%E3%81%84%E3%81%9F%E3%81%BE%E5%B8%82%E5%8D%97%E5%8C%BA+%E9%98%B2%E7%81%BD%E8%A8%93%E7%B7%B4%E3%81%AE%E3%81%94%E6%A1%88%E5%86%85%0A%E8%A5%BF%E6%B5%A6%E5%92%8C%E5%B0%8F%E5%AD%A6%E6%A0%A1+9:00%E9%96%8B%E5%A7%8B',
+                confirmedByMe: false,
+                readCount: 168,
+                totalCount: 248
+            },
+            {
+                id: 'c2',
+                category: '市報・行政',
+                title: '市報さいたま（南区版）11月号 重要抜粋・年末年始のゴミ収集日程',
+                author: '鈴木 節子（3班長）',
+                date: '2026年11月15日',
+                body: '年末年始の普通ごみ・資源物の収集日程表です。12月31日〜1月3日は収集がお休みとなります。冷蔵庫などに貼ってご活用ください。',
+                fileType: 'image',
+                fileName: '年末年始ゴミ収集カレンダー_南区.jpg',
+                imageUrl: 'https://placehold.co/600x340/06C755/FFFFFF?text=%E5%B9%B4%E6%9C%AB%E5%B9%B4%E5%A7%8B+%E3%82%B4%E3%83%9F%E5%8F%8E%E9%9B%86%E6%97%A5%E7%A8%8B%E8%A1%A8%0A%EF%BC%88%E3%81%95%E3%81%84%E3%81%9F%E3%81%BE%E5%B8%82%E5%8D%97%E5%8C%BA+%E6%9D%BE%E6%9C%AC1%E4%B8%81%E7%9B%AE%EF%BC%89',
+                confirmedByMe: true,
+                readCount: 215,
+                totalCount: 248
+            }
+        ],
+
+        // 街の不具合報告データ
+        reports: [
+            {
+                id: 'r1',
+                category: '道路の穴・陥没',
+                location: '松本1丁目14番地付近（美笹通りから西へ50mの生活道路）',
+                description: 'アスファルトが直径30cmほど陥没しており、雨の日に水たまりになって見えづらく危険です。',
+                reporter: '田中 健太（2班）',
+                date: '今日 11:20',
+                status: 'open', // 'open': 受付中, 'progress': 市へ連絡済, 'done': 修繕完了
+                imageUrl: 'https://placehold.co/600x320/78350F/FFFFFF?text=%E3%80%90%E7%8F%BE%E5%A0%B4%E5%86%99%E7%9C%9F%E3%80%91%E9%81%93%E8%B7%AF%E8%88%97%E8%A3%85%E3%81%AE%E9%99%A5%E6%B2%A1%E7%AE%87%E6%89%80'
+            },
+            {
+                id: 'r2',
+                category: '街灯の球切れ・破損',
+                location: '笹目川遊歩道沿い 防犯灯 No.M1-42',
+                description: '夜間、LED防犯灯がチカチカ点滅してほとんど消えかかっています。通学路なので早めの交換をお願いします。',
+                reporter: '渡辺 浩二（防犯部長）',
+                date: '2日前',
+                status: 'progress',
+                imageUrl: 'https://placehold.co/600x320/1E293B/FACC15?text=%E3%80%90%E7%8F%BE%E5%A0%B4%E5%86%99%E7%9C%9F%E3%80%91%E7%AC%B9%E7%9B%AE%E5%B7%9D%E6%B2%BF%E3%81%84%E9%98%B2%E7%8A%AF%E7%81%AF%E7%90%83%E5%88%87%E3%82%8C'
+            },
+            {
+                id: 'r3',
+                category: '水路・側溝のつまり',
+                location: '松本1丁目8番地 交差点角の雨水マス',
+                description: '落ち葉と泥が詰まっており、先日の大雨で水が溢れそうになっていました。',
+                reporter: '山田 太郎（3班）',
+                date: '1週間前',
+                status: 'done',
+                imageUrl: 'https://placehold.co/600x320/065F46/FFFFFF?text=%E3%80%90%E4%BF%AE%E7%B9%95%E5%AE%8C%E4%BA%86%E3%80%91%E5%81%B4%E6%BA%9D%E3%81%AE%E6%B8%85%E6%8E%83%E3%83%BB%E6%B3%A5%E9%99%A4%E5%8E%BB%E6%B8%88'
+            }
+        ],
+
+        // さいたま市・南区役所 実在関連部署電話帳
+        govContacts: [
+            {
+                name: 'さいたま市南区役所（代表・くらし応援室）',
+                desc: '住民票・福祉・地域活動・一般的な行政相談',
+                phone: '048-844-7111',
+                hours: '平日 8:30〜17:15'
+            },
+            {
+                name: '南部建設事務所 道路維持課',
+                desc: '道路の穴・陥没・街灯の球切れ・側溝の詰まり通報',
+                phone: '048-840-6191',
+                hours: '平日 8:30〜17:15（緊急時は夜間受付へ転送）'
+            },
+            {
+                name: '浦和警察署（松本一丁目 管轄警察署）',
+                desc: '不審者情報・交通事故・防犯相談・落し物',
+                phone: '048-825-0110',
+                hours: '24時間受付（緊急時は110番）'
+            },
+            {
+                name: 'さいたま市消防局 南消防署',
+                desc: '火災予防・救急相談・防災訓練の相談',
+                phone: '048-861-0119',
+                hours: '24時間受付（緊急時は119番）'
+            },
+            {
+                name: 'さいたま市水道局 電話受付センター',
+                desc: '道路での漏水・断水・水道メーターのトラブル',
+                phone: '048-665-3220',
+                hours: '24時間365日受付'
+            },
+            {
+                name: '南区役所 保健センター・子育て支援課',
+                desc: '高齢者見守り・母子保健・予防接種など',
+                phone: '048-844-7231',
+                hours: '平日 8:30〜17:15'
+            }
+        ]
+    };
+
+    // =========================================================================
+    // 2. 初期化処理
+    // =========================================================================
+    window.onload = function() {
+        updateHeaderUI();
+        renderChatMessages();
+        renderCirculars();
+        renderReports();
+        renderGovContacts();
+    };
+
+    // =========================================================================
+    // 3. 会員認証・役割切り替えロジック
+    // =========================================================================
+    function showAuthScreen() {
+        closeModal('modal-role');
+        document.getElementById('auth-screen').classList.remove('hidden');
+    }
+
+    function loginAs(roleType) {
+        switchUserRole(roleType);
+        document.getElementById('auth-screen').classList.add('hidden');
+        showToast(`${state.currentUser.name}さん（${state.currentUser.roleLabel}）としてログインしました`);
+    }
+
+    function toggleRoleModal() {
+        // 現在の選択状態をモーダル内に反映
+        const isOfficer = state.currentUser.role === 'officer';
+        const optMember = document.getElementById('role-opt-member');
+        const optOfficer = document.getElementById('role-opt-officer');
+
+        if (isOfficer) {
+            optMember.className = 'w-full p-3.5 rounded-xl border-2 border-gray-200 hover:border-emerald-400 text-left flex items-center justify-between';
+            optMember.querySelector('i').className = 'fa-solid fa-check-circle text-gray-300 text-lg';
+            optOfficer.className = 'w-full p-3.5 rounded-xl border-2 border-amber-500 bg-amber-50 text-left flex items-center justify-between';
+            optOfficer.querySelector('i').className = 'fa-solid fa-check-circle text-amber-600 text-lg';
+        } else {
+            optMember.className = 'w-full p-3.5 rounded-xl border-2 border-emerald-500 bg-emerald-50 text-left flex items-center justify-between';
+            optMember.querySelector('i').className = 'fa-solid fa-check-circle text-emerald-600 text-lg';
+            optOfficer.className = 'w-full p-3.5 rounded-xl border-2 border-gray-200 hover:border-amber-400 text-left flex items-center justify-between';
+            optOfficer.querySelector('i').className = 'fa-solid fa-check-circle text-gray-300 text-lg';
+        }
+        openModal('modal-role');
+    }
+
+    function switchUserRole(roleType) {
+        if (roleType === 'officer') {
+            state.currentUser = {
+                id: 'M1-0004',
+                name: '佐藤 花子',
+                group: '防災・広報理事',
+                role: 'officer',
+                roleLabel: '理事・役員'
+            };
+        } else {
+            state.currentUser = {
+                id: 'M1-0312',
+                name: '山田 太郎',
+                group: '3班',
+                role: 'member',
+                roleLabel: '一般会員'
+            };
+            // 一般会員に切り替えた時、理事会専用ルームを開いていたらお知らせルームに戻す
+            if (state.activeRoom === 'board') {
+                state.activeRoom = 'notice';
+            }
+        }
+        closeModal('modal-role');
+        updateHeaderUI();
+        selectRoom(state.activeRoom);
+        renderReports(); // 理事モードならステータス変更ボタンを表示するため再描画
+        showToast(`アカウントを「${state.currentUser.name}（${state.currentUser.roleLabel}）」に切替ました`);
+    }
+
+    function updateHeaderUI() {
+        const isOfficer = state.currentUser.role === 'officer';
+        document.getElementById('header-user-info').textContent = 
+            `${state.currentUser.name}（${state.currentUser.group} / ${state.currentUser.roleLabel}）`;
+        
+        const badge = document.getElementById('header-role-badge');
+        badge.className = isOfficer 
+            ? 'w-2.5 h-2.5 rounded-full bg-amber-400' 
+            : 'w-2.5 h-2.5 rounded-full bg-emerald-400';
+
+        // 理事会タブの鍵アイコン更新
+        const lockIcon = document.getElementById('board-lock-icon');
+        if (isOfficer) {
+            lockIcon.className = 'fa-solid fa-lock-open text-amber-600';
+        } else {
+            lockIcon.className = 'fa-solid fa-lock text-amber-600';
+        }
+    }
+
+    // =========================================================================
+    // 4. 下部タブ切り替えロジック
+    // =========================================================================
+    function switchTab(tabName) {
+        state.activeTab = tabName;
+        const tabs = ['talk', 'circular', 'report', 'emergency'];
+        
+        tabs.forEach(t => {
+            const sec = document.getElementById(`tab-${t}`);
+            const nav = document.getElementById(`nav-${t}`);
+            if (t === tabName) {
+                sec.classList.remove('hidden');
+                nav.classList.remove('text-gray-500');
+                nav.classList.add('text-lineGreen', 'font-bold');
+            } else {
+                sec.classList.add('hidden');
+                nav.classList.add('text-gray-500');
+                nav.classList.remove('text-lineGreen', 'font-bold');
+            }
+        });
+    }
+
+    // =========================================================================
+    // 5. トーク（LINE風チャット＆お知らせモード）ロジック
+    // =========================================================================
+    function selectRoom(roomId) {
+        // 理事会専用ルームへのアクセス制御
+        if (roomId === 'board' && state.currentUser.role !== 'officer') {
+            showToast('🔒 「理事会専用ルーム」は理事・役員のみ入室できます');
+            return;
+        }
+
+        state.activeRoom = roomId;
+
+        // タブのアクティブ見た目更新
+        const rooms = ['notice', 'group3', 'patrol', 'board'];
+        rooms.forEach(r => {
+            const btn = document.getElementById(`room-btn-${r}`);
+            if (r === roomId) {
+                if (r === 'board') {
+                    btn.className = 'room-tab active px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0 transition bg-amber-600 text-white shadow-sm';
+                } else {
+                    btn.className = 'room-tab active px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0 transition bg-lineGreen text-white shadow-sm';
+                }
+            } else {
+                if (r === 'board') {
+                    btn.className = 'room-tab px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0 transition bg-amber-50 text-amber-800 border border-amber-300';
+                } else {
+                    btn.className = 'room-tab px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0 transition bg-gray-100 text-gray-700 hover:bg-gray-200';
+                }
+            }
+        });
+
+        // ルーム説明バナーと入力欄の権限制御
+        const descEl = document.getElementById('room-desc');
+        const countEl = document.getElementById('room-member-count');
+        const composer = document.getElementById('chat-composer');
+        const readonlyNotice = document.getElementById('chat-readonly-notice');
+        const noticeBadge = document.getElementById('notice-composer-badge');
+        const isOfficer = state.currentUser.role === 'officer';
+
+        if (roomId === 'notice') {
+            descEl.innerHTML = '<i class="fa-solid fa-bullhorn mr-1 text-emerald-600"></i>自治会役員からの全会員一斉お知らせ';
+            countEl.textContent = '全248世帯';
+            if (isOfficer) {
+                composer.classList.remove('hidden');
+                readonlyNotice.classList.add('hidden');
+                noticeBadge.classList.remove('hidden');
+            } else {
+                composer.classList.add('hidden');
+                readonlyNotice.classList.remove('hidden');
+                noticeBadge.classList.add('hidden');
+            }
+        } else if (roomId === 'group3') {
+            descEl.innerHTML = '<i class="fa-solid fa-users mr-1 text-emerald-600"></i>松本1丁目 3班の連絡網グループ';
+            countEl.textContent = '18世帯';
+            composer.classList.remove('hidden');
+            readonlyNotice.classList.add('hidden');
+            noticeBadge.classList.add('hidden');
+        } else if (roomId === 'patrol') {
+            descEl.innerHTML = '<i class="fa-solid fa-shield-cat mr-1 text-emerald-600"></i>自主防犯パトロール隊 情報共有';
+            countEl.textContent = '34名';
+            composer.classList.remove('hidden');
+            readonlyNotice.classList.add('hidden');
+            noticeBadge.classList.add('hidden');
+        } else if (roomId === 'board') {
+            descEl.innerHTML = '<i class="fa-solid fa-user-shield mr-1 text-amber-600"></i>松本一丁目自治会 役員・理事専用ルーム';
+            countEl.textContent = '役員12名';
+            composer.classList.remove('hidden');
+            readonlyNotice.classList.add('hidden');
+            noticeBadge.classList.add('hidden');
+        }
+
+        renderChatMessages();
+    }
+
+    function renderChatMessages() {
+        const container = document.getElementById('chat-messages');
+        const list = state.messages[state.activeRoom] || [];
+        container.innerHTML = '';
+
+        // 日付セパレーター
+        container.innerHTML += `
+            <div class="text-center">
+                <span class="bg-black/20 text-white text-[11px] px-3 py-0.5 rounded-full">今日</span>
+            </div>
+        `;
+
+        if (state.activeRoom === 'notice') {
+            // 全会員お知らせカードスタイル（LINE公式アカウント風）
+            list.forEach(msg => {
+                const urgentTag = msg.isUrgent 
+                    ? `<span class="bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded mr-1.5">重要</span>` 
+                    : `<span class="bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded mr-1.5">お知らせ</span>`;
+                
+                const btnHtml = msg.confirmedByMe
+                    ? `<button onclick="toggleNoticeConfirm('${msg.id}')" class="w-full py-2.5 rounded-xl bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-circle-check text-emerald-600 text-sm"></i>確認しました（既読済・${msg.confirmCount}世帯）
+                       </button>`
+                    : `<button onclick="toggleNoticeConfirm('${msg.id}')" class="w-full py-2.5 rounded-xl bg-lineGreen hover:bg-lineDark text-white font-bold text-xs shadow flex items-center justify-center gap-1.5 active:scale-98 transition">
+                        <i class="fa-regular fa-hand-pointer"></i>確認しました（押して既読にする・現在${msg.confirmCount}世帯）
+                       </button>`;
+
+                container.innerHTML += `
+                    <div class="bg-white rounded-2xl p-4 shadow-sm border ${msg.isUrgent ? 'border-red-300' : 'border-gray-200'}">
+                        <div class="flex items-center justify-between mb-2 pb-2 border-b border-gray-100">
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-8 rounded-full bg-slate-700 text-white flex items-center justify-center text-xs font-bold">
+                                    <i class="fa-solid fa-bullhorn"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-bold text-gray-800">${msg.sender}</div>
+                                    <div class="text-[10px] text-gray-400">${msg.time}</div>
+                                </div>
+                            </div>
+                            ${urgentTag}
+                        </div>
+                        <p class="text-sm text-gray-800 whitespace-pre-line leading-relaxed mb-3.5">${escapeHtml(msg.text)}</p>
+                        ${btnHtml}
+                    </div>
+                `;
+            });
+        } else {
+            // 通常のLINE風左右吹き出しチャット
+            list.forEach(msg => {
+                if (msg.isSelf) {
+                    container.innerHTML += `
+                        <div class="flex items-end justify-end gap-1.5">
+                            <div class="text-[10px] text-gray-600 text-right shrink-0">
+                                <div class="text-emerald-800 font-bold">既読</div>
+                                <div>${msg.time}</div>
+                            </div>
+                            <div class="bubble-self px-3.5 py-2.5 max-w-[75%] shadow-sm text-sm text-gray-900 whitespace-pre-line leading-relaxed">
+                                ${escapeHtml(msg.text)}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML += `
+                        <div class="flex items-start gap-2">
+                            <div class="w-9 h-9 rounded-full bg-slate-600 text-white flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 shadow-sm">
+                                ${msg.sender.slice(0, 1)}
+                            </div>
+                            <div class="max-w-[75%]">
+                                <div class="text-[11px] font-bold text-gray-700 mb-0.5 ml-1">${escapeHtml(msg.sender)}</div>
+                                <div class="flex items-end gap-1.5">
+                                    <div class="bubble-other px-3.5 py-2.5 shadow-sm text-sm text-gray-900 whitespace-pre-line leading-relaxed">
+                                        ${escapeHtml(msg.text)}
+                                    </div>
+                                    <span class="text-[10px] text-gray-600 shrink-0">${msg.time}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+        }
+
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function toggleNoticeConfirm(msgId) {
+        const msg = state.messages.notice.find(m => m.id === msgId);
+        if (!msg) return;
+        msg.confirmedByMe = !msg.confirmedByMe;
+        msg.confirmCount += msg.confirmedByMe ? 1 : -1;
+        renderChatMessages();
+        if (msg.confirmedByMe) {
+            showToast('「確認しました」を役員へ送信しました');
+            updateUnreadBadges();
+        }
+    }
+
+    function toggleStickerPalette() {
+        document.getElementById('sticker-palette').classList.toggle('hidden');
+    }
+
+    function sendSticker(stickerText) {
+        document.getElementById('sticker-palette').classList.add('hidden');
+        postMessageToRoom(stickerText);
+    }
+
+    function sendChatMessage() {
+        const input = document.getElementById('chat-input');
+        const text = input.value.trim();
+        if (!text) return;
+        input.value = '';
+        postMessageToRoom(text);
+    }
+
+    function postMessageToRoom(text) {
+        const now = new Date();
+        const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+        if (state.activeRoom === 'notice') {
+            const isUrgent = document.getElementById('notice-urgent-check').checked;
+            state.messages.notice.unshift({
+                id: 'n' + Date.now(),
+                sender: `${state.currentUser.name}（${state.currentUser.group}）`,
+                role: '理事',
+                time: `たった今 (${timeStr})`,
+                isUrgent: isUrgent,
+                text: text,
+                confirmedByMe: true,
+                confirmCount: 1
+            });
+            showToast('全会員へお知らせを一斉配信しました！');
+        } else {
+            state.messages[state.activeRoom].push({
+                id: 'm' + Date.now(),
+                sender: `${state.currentUser.name}（${state.currentUser.group}）`,
+                isSelf: true,
+                time: timeStr,
+                text: text
+            });
+        }
+        renderChatMessages();
+    }
+
+    // =========================================================================
+    // 6. 電子回覧板（PDF・画像・カメラ撮影＆電子印鑑）ロジック
+    // =========================================================================
+    function filterCirculars(cat) {
+        state.circularFilter = cat;
+        document.querySelectorAll('.circ-filter').forEach(btn => {
+            if (btn.textContent === cat || (cat === 'all' && btn.textContent === 'すべて')) {
+                btn.className = 'circ-filter active px-3 py-1 rounded-full text-xs font-bold bg-blue-600 text-white';
+            } else {
+                btn.className = 'circ-filter px-3 py-1 rounded-full text-xs font-bold bg-white border border-gray-300 text-gray-700';
+            }
+        });
+        renderCirculars();
+    }
+
+    function renderCirculars() {
+        const container = document.getElementById('circular-list');
+        container.innerHTML = '';
+
+        const filtered = state.circularFilter === 'all' 
+            ? state.circulars 
+            : state.circulars.filter(c => c.category === state.circularFilter);
+
+        filtered.forEach(item => {
+            const rate = Math.round((item.readCount / item.totalCount) * 100);
+            const stampHtml = item.confirmedByMe
+                ? `<div class="hanko-stamp shrink-0">
+                    <span>確認済</span>
+                    <span class="text-[9px] border-t border-red-500 mt-0.5 pt-0.5">${state.currentUser.name.split(' ')[0]}</span>
+                   </div>`
+                : `<span class="bg-red-100 text-red-700 border border-red-300 text-xs font-bold px-2.5 py-1 rounded-lg shrink-0">
+                    未確認
+                   </span>`;
+
+            const fileIcon = item.fileType === 'pdf' 
+                ? '<i class="fa-solid fa-file-pdf text-red-500"></i>' 
+                : '<i class="fa-solid fa-image text-blue-500"></i>';
+
+            container.innerHTML += `
+                <div onclick="openCircularDetail('${item.id}')" class="bg-white rounded-2xl p-4 shadow-sm border border-gray-200 hover:border-blue-400 transition cursor-pointer active:scale-99">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="bg-blue-50 text-blue-700 text-[11px] font-bold px-2 py-0.5 rounded">${item.category}</span>
+                                <span class="text-[11px] text-gray-400">${item.date}</span>
+                            </div>
+                            <h3 class="font-bold text-sm sm:text-base text-gray-900 leading-snug mb-1.5">${escapeHtml(item.title)}</h3>
+                            <p class="text-xs text-gray-600 line-clamp-2 mb-2.5">${escapeHtml(item.body)}</p>
+                        </div>
+                        ${stampHtml}
+                    </div>
+
+                    ${item.fileName ? `
+                        <div class="bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-700 flex items-center gap-2 mb-2.5">
+                            ${fileIcon}
+                            <span class="truncate font-medium">${escapeHtml(item.fileName)}</span>
+                        </div>
+                    ` : ''}
+
+                    <div class="flex items-center justify-between text-[11px] text-gray-500 pt-2 border-t border-gray-100">
+                        <span>回覧元: ${escapeHtml(item.author)}</span>
+                        <div class="flex items-center gap-2">
+                            <span>既読率 <strong>${rate}%</strong> (${item.readCount}/${item.totalCount}世帯)</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    function openCircularDetail(id) {
+        const item = state.circulars.find(c => c.id === id);
+        if (!item) return;
+
+        document.getElementById('detail-circ-cat').textContent = item.category;
+        const content = document.getElementById('detail-circ-content');
+
+        const actionBtn = item.confirmedByMe
+            ? `<div class="bg-red-50 border-2 border-red-200 rounded-2xl p-4 flex items-center justify-between">
+                <div>
+                    <div class="font-bold text-red-700 text-sm">電子確認印を押印済みです</div>
+                    <div class="text-xs text-red-600">班長・役員の確認リストに反映されました</div>
+                </div>
+                <div class="hanko-stamp">
+                    <span>確認済</span>
+                    <span class="text-[9px] border-t border-red-500 mt-0.5 pt-0.5">${state.currentUser.name.split(' ')[0]}</span>
+                </div>
+               </div>`
+            : `<button onclick="stampCircular('${item.id}')" class="w-full py-4 rounded-2xl bg-red-600 hover:bg-red-700 active:scale-95 transition text-white font-bold text-base shadow-lg flex items-center justify-center gap-2">
+                <i class="fa-solid fa-stamp text-xl"></i>
+                <span>回覧を確認した（電子ハンコを押す）</span>
+               </button>`;
+
+        content.innerHTML = `
+            <div>
+                <div class="text-xs text-gray-500 mb-1">${item.date} / 発信: ${escapeHtml(item.author)}</div>
+                <h3 class="font-bold text-lg text-gray-900 leading-snug">${escapeHtml(item.title)}</h3>
+            </div>
+
+            ${item.imageUrl ? `
+                <div class="border border-gray-200 rounded-xl overflow-hidden bg-gray-100">
+                    <img src="${item.imageUrl}" alt="回覧資料" class="w-full h-auto object-contain">
+                    <div class="bg-gray-800 text-white text-[11px] px-3 py-1.5 flex items-center justify-between">
+                        <span><i class="fa-solid fa-file mr-1"></i>${escapeHtml(item.fileName || '添付資料')}</span>
+                        <span>ピンチ操作で拡大可能</span>
+                    </div>
+                </div>
+            ` : ''}
+
+            <div class="bg-gray-50 p-3.5 rounded-xl text-sm text-gray-800 whitespace-pre-line leading-relaxed border border-gray-200">
+                ${escapeHtml(item.body)}
+            </div>
+
+            ${actionBtn}
+        `;
+
+        openModal('modal-circular-detail');
+    }
+
+    function stampCircular(id) {
+        const item = state.circulars.find(c => c.id === id);
+        if (!item || item.confirmedByMe) return;
+        item.confirmedByMe = true;
+        item.readCount += 1;
+        openCircularDetail(id); // モーダル内をスタンプ済に更新
+        renderCirculars();
+        updateUnreadBadges();
+        showToast('電子確認印を押印しました！');
+    }
+
+    // カメラ撮影・PDF/画像選択ハンドラ
+    function handleCircularFile(event, sourceType) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const isPdf = file.type === 'application/pdf';
+        const previewDiv = document.getElementById('circ-file-preview');
+        const iconEl = document.getElementById('circ-preview-icon');
+        const nameEl = document.getElementById('circ-preview-name');
+
+        previewDiv.classList.remove('hidden');
+        nameEl.textContent = (sourceType === 'camera' ? '📷 カメラ撮影: ' : '') + file.name;
+        iconEl.className = isPdf ? 'fa-solid fa-file-pdf text-red-600 text-lg' : 'fa-solid fa-image text-blue-600 text-lg';
+
+        if (isPdf) {
+            state.tempCircularFile = {
+                type: 'pdf',
+                name: file.name,
+                url: 'https://placehold.co/600x340/DC2626/FFFFFF?text=PDF%E6%96%87%E6%9B%B8%E3%83%97%E3%83%AC%E3%83%93%E3%83%A5%E3%83%BC%0A' + encodeURIComponent(file.name)
+            };
+        } else {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                state.tempCircularFile = {
+                    type: 'image',
+                    name: file.name,
+                    url: e.target.result
+                };
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function attachSampleFlyer() {
+        document.getElementById('circ-file-preview').classList.remove('hidden');
+        document.getElementById('circ-preview-icon').className = 'fa-solid fa-camera text-blue-600 text-lg';
+        document.getElementById('circ-preview-name').textContent = '📷 撮影チラシ_町内清掃のお知らせ.jpg';
+        state.tempCircularFile = {
+            type: 'image',
+            name: '撮影チラシ_町内清掃のお知らせ.jpg',
+            url: 'https://placehold.co/600x350/059669/FFFFFF?text=%E3%80%90%E3%82%AB%E3%83%A1%E3%83%A9%E6%92%AE%E5%BD%B1%E3%83%81%E3%83%A9%E3%82%B7%E3%80%91%0A%E6%9D%BE%E6%9C%AC%E4%B8%80%E4%B8%81%E7%9B%AE+%E4%B8%80%E6%96%89%E6%B8%85%E6%8E%83%E3%81%AE%E3%81%94%E6%A1%88%E5%86%85'
+        };
+    }
+
+    function clearCircularFile() {
+        state.tempCircularFile = null;
+        document.getElementById('circ-file-preview').classList.add('hidden');
+    }
+
+    function submitNewCircular() {
+        const cat = document.getElementById('circ-input-cat').value;
+        const title = document.getElementById('circ-input-title').value.trim();
+        const body = document.getElementById('circ-input-body').value.trim();
+
+        if (!title) {
+            showToast('⚠️ 回覧タイトルを入力してください');
+            return;
+        }
+
+        const today = new Date();
+        const dateStr = `${today.getFullYear()}年${today.getMonth()+1}月${today.getDate()}日`;
+
+        state.circulars.unshift({
+            id: 'c' + Date.now(),
+            category: cat,
+            title: title,
+            author: `${state.currentUser.name}（${state.currentUser.group}）`,
+            date: dateStr,
+            body: body || '添付のチラシ・資料をご確認ください。',
+            fileType: state.tempCircularFile ? state.tempCircularFile.type : null,
+            fileName: state.tempCircularFile ? state.tempCircularFile.name : null,
+            imageUrl: state.tempCircularFile ? state.tempCircularFile.url : null,
+            confirmedByMe: true,
+            readCount: 1,
+            totalCount: 248
+        });
+
+        // フォーム初期化
+        document.getElementById('circ-input-title').value = '';
+        document.getElementById('circ-input-body').value = '';
+        clearCircularFile();
+        closeModal('modal-new-circular');
+        renderCirculars();
+        showToast('新しい電子回覧板を掲示しました！');
+    }
+
+    // =========================================================================
+    // 7. 街の不具合報告（道路・街灯・水路レポート）ロジック
+    // =========================================================================
+    function renderReports() {
+        const container = document.getElementById('report-list');
+        container.innerHTML = '';
+
+        // 集計カウント更新
+        document.getElementById('stat-open').textContent = state.reports.filter(r => r.status === 'open').length + '件';
+        document.getElementById('stat-progress').textContent = state.reports.filter(r => r.status === 'progress').length + '件';
+        document.getElementById('stat-done').textContent = state.reports.filter(r => r.status === 'done').length + '件';
+
+        const isOfficer = state.currentUser.role === 'officer';
+
+        state.reports.forEach(rep => {
+            let statusBadge = '';
+            if (rep.status === 'open') {
+                statusBadge = '<span class="bg-red-100 text-red-700 border border-red-300 text-xs font-bold px-2.5 py-0.5 rounded-full">受付中</span>';
+            } else if (rep.status === 'progress') {
+                statusBadge = '<span class="bg-amber-100 text-amber-800 border border-amber-300 text-xs font-bold px-2.5 py-0.5 rounded-full">さいたま市へ連絡済</span>';
+            } else {
+                statusBadge = '<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-bold px-2.5 py-0.5 rounded-full">修繕完了</span>';
+            }
+
+            // 理事・役員のみ表示される対応ステータス変更コントロール
+            const officerControls = isOfficer ? `
+                <div class="mt-3 pt-2.5 border-t border-amber-200 bg-amber-50/80 -mx-4 -mb-4 px-4 py-2.5 rounded-b-2xl flex items-center justify-between">
+                    <span class="text-[11px] font-bold text-amber-900"><i class="fa-solid fa-user-tie mr-1"></i>役員対応ステータス:</span>
+                    <select onchange="changeReportStatus('${rep.id}', this.value)" class="text-xs font-bold border border-amber-400 rounded-lg px-2 py-1 bg-white text-gray-800">
+                        <option value="open" ${rep.status==='open'?'selected':''}>受付中</option>
+                        <option value="progress" ${rep.status==='progress'?'selected':''}>さいたま市へ連絡済</option>
+                        <option value="done" ${rep.status==='done'?'selected':''}>修繕完了</option>
+                    </select>
+                </div>
+            ` : '';
+
+            container.innerHTML += `
+                <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-bold text-sm text-orange-700">${escapeHtml(rep.category)}</span>
+                        ${statusBadge}
+                    </div>
+
+                    <div class="text-xs font-bold text-gray-800 bg-gray-100 px-2.5 py-1.5 rounded-lg mb-2 flex items-center gap-1.5">
+                        <i class="fa-solid fa-location-dot text-red-500"></i>
+                        <span>${escapeHtml(rep.location)}</span>
+                    </div>
+
+                    <p class="text-xs text-gray-700 leading-relaxed mb-2.5">${escapeHtml(rep.description)}</p>
+
+                    ${rep.imageUrl ? `
+                        <img src="${rep.imageUrl}" alt="不具合現場写真" class="w-full h-36 object-cover rounded-xl border border-gray-200 mb-2.5">
+                    ` : ''}
+
+                    <div class="flex items-center justify-between text-[11px] text-gray-400">
+                        <span>報告者: ${escapeHtml(rep.reporter)}</span>
+                        <span>${rep.date}</span>
+                    </div>
+
+                    ${officerControls}
+                </div>
+            `;
+        });
+    }
+
+    function changeReportStatus(id, newStatus) {
+        const rep = state.reports.find(r => r.id === id);
+        if (!rep) return;
+        rep.status = newStatus;
+        renderReports();
+        showToast('不具合の対応ステータスを更新しました');
+    }
+
+    function fillMockLocation() {
+        const spots = [
+            'さいたま市南区松本1丁目19番地付近（荒川彩湖公園入口側）',
+            'さいたま市南区松本1丁目6番地（西浦和駅方面への通学路沿い）',
+            'さいたま市南区松本1丁目11番地（笹目川・松本橋たもと）'
+        ];
+        const picked = spots[Math.floor(Math.random() * spots.length)];
+        document.getElementById('rep-input-loc').value = picked;
+        showToast('📍 GPSから松本一丁目内の現在地を取得しました');
+    }
+
+    function handleReportPhoto(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            state.tempReportPhoto = e.target.result;
+            document.getElementById('rep-preview-img').src = e.target.result;
+            document.getElementById('rep-photo-preview').classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function attachSampleReportPhoto() {
+        const sampleUrl = 'https://placehold.co/600x320/B45309/FFFFFF?text=%E3%80%90%E3%82%AB%E3%83%A1%E3%83%A9%E6%92%AE%E5%BD%B1%E3%80%91%E6%9D%BE%E6%9C%AC1%E4%B8%81%E7%9B%AE+%E4%B8%8D%E5%85%B7%E5%90%88%E7%8F%BE%E5%A0%B4';
+        state.tempReportPhoto = sampleUrl;
+        document.getElementById('rep-preview-img').src = sampleUrl;
+        document.getElementById('rep-photo-preview').classList.remove('hidden');
+    }
+
+    function clearReportPhoto() {
+        state.tempReportPhoto = null;
+        document.getElementById('rep-photo-preview').classList.add('hidden');
+    }
+
+    function submitNewReport() {
+        const cat = document.getElementById('rep-input-cat').value;
+        const loc = document.getElementById('rep-input-loc').value.trim();
+        const desc = document.getElementById('rep-input-desc').value.trim();
+
+        if (!loc) {
+            showToast('⚠️ 発生場所を入力または現在地取得してください');
+            return;
+        }
+
+        state.reports.unshift({
+            id: 'r' + Date.now(),
+            category: cat,
+            location: loc,
+            description: desc || '現地確認をお願いいたします。',
+            reporter: `${state.currentUser.name}（${state.currentUser.group}）`,
+            date: 'たった今',
+            status: 'open',
+            imageUrl: state.tempReportPhoto
+        });
+
+        document.getElementById('rep-input-loc').value = '';
+        document.getElementById('rep-input-desc').value = '';
+        clearReportPhoto();
+        closeModal('modal-new-report');
+        renderReports();
+        showToast('自治会役員へ不具合レポートを送信しました！');
+    }
+
+    // =========================================================================
+    // 8. 緊急連絡＆さいたま市南区役所ワンタップ電話帳ロジック
+    // =========================================================================
+    function renderGovContacts() {
+        const container = document.getElementById('gov-contacts-list');
+        container.innerHTML = '';
+
+        state.govContacts.forEach(c => {
+            const cleanNum = c.phone.replace(/-/g, '');
+            container.innerHTML += `
+                <div class="p-3.5 flex items-center justify-between gap-3 hover:bg-blue-50/40 transition">
+                    <div class="min-w-0">
+                        <div class="font-bold text-sm text-gray-900 leading-snug">${escapeHtml(c.name)}</div>
+                        <div class="text-xs text-gray-600 mt-0.5">${escapeHtml(c.desc)}</div>
+                        <div class="text-[11px] text-gray-400 mt-0.5">受付: ${escapeHtml(c.hours)}</div>
+                    </div>
+                    <a href="tel:${cleanNum}" onclick="confirmCall(event, '${escapeHtml(c.name)}', '${c.phone}')" class="bg-lineGreen hover:bg-lineDark active:scale-95 transition text-white px-3.5 py-2.5 rounded-xl font-bold text-xs flex flex-col items-center justify-center shrink-0 shadow-sm">
+                        <i class="fa-solid fa-phone text-sm mb-0.5"></i>
+                        <span>電話する</span>
+                    </a>
+                </div>
+            `;
+        });
+    }
+
+    function confirmCall(event, name, phone) {
+        event.preventDefault();
+        document.getElementById('call-target-name').textContent = name;
+        document.getElementById('call-target-number').textContent = phone;
+        document.getElementById('call-exec-link').href = 'tel:' + phone.replace(/-/g, '');
+        openModal('modal-call-confirm');
+    }
+
+    function sendEmergencyAlert() {
+        const type = document.getElementById('emg-type').value;
+        const detail = document.getElementById('emg-detail').value.trim();
+
+        if (!detail) {
+            showToast('⚠️ 発生場所や状況を入力してください');
+            return;
+        }
+
+        const alertSummary = `【緊急・${type}】${detail}`;
+
+        // 1. 画面上部の緊急速報ティッカーを表示
+        const bar = document.getElementById('global-emergency-bar');
+        document.getElementById('global-emergency-text').textContent = alertSummary;
+        bar.classList.remove('hidden');
+
+        // 2. 全会員お知らせトークにも緊急投稿として追加
+        state.messages.notice.unshift({
+            id: 'emg' + Date.now(),
+            sender: `🚨 緊急発信: ${state.currentUser.name}（${state.currentUser.group}）`,
+            role: '緊急',
+            time: 'たった今（緊急速報）',
+            isUrgent: true,
+            text: `【${type}】\n${detail}\n\n※松本一丁目自治会員の皆様は安全確保と周囲への声かけをお願いいたします。`,
+            confirmedByMe: true,
+            confirmCount: 1
+        });
+
+        document.getElementById('emg-detail').value = '';
+        closeModal('modal-emergency-send');
+        switchTab('talk');
+        selectRoom('notice');
+        showToast('🚨 全会員へ緊急アラートを発信しました！');
+    }
+
+    function dismissEmergencyBar() {
+        document.getElementById('global-emergency-bar').classList.add('hidden');
+    }
+
+    // =========================================================================
+    // 9. ユーティリティ関数（モーダル制御・バッジ・トースト・サニタイズ）
+    // =========================================================================
+    function openModal(id) {
+        document.getElementById(id).classList.remove('hidden');
+    }
+
+    function closeModal(id) {
+        document.getElementById(id).classList.add('hidden');
+    }
+
+    function updateUnreadBadges() {
+        const unreadNotices = state.messages.notice.filter(m => !m.confirmedByMe).length;
+        const badgeTalk = document.getElementById('badge-talk');
+        if (unreadNotices > 0) {
+            badgeTalk.textContent = unreadNotices;
+            badgeTalk.classList.remove('hidden');
+        } else {
+            badgeTalk.classList.add('hidden');
+        }
+
+        const unreadCircs = state.circulars.filter(c => !c.confirmedByMe).length;
+        const badgeCirc = document.getElementById('badge-circular');
+        if (unreadCircs > 0) {
+            badgeCirc.textContent = unreadCircs;
+            badgeCirc.classList.remove('hidden');
+        } else {
+            badgeCirc.classList.add('hidden');
+        }
+    }
+
+    let toastTimer = null;
+    function showToast(message) {
+        const toast = document.getElementById('toast');
+        document.getElementById('toast-msg').textContent = message;
+        toast.classList.remove('hidden');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+            toast.classList.add('hidden');
+        }, 3000);
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+</script>
+</body>
+</html>
